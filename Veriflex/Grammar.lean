@@ -9,7 +9,7 @@ a function which takes the lexed string and transforms it into a token.
 
 namespace Veriflex
 
-structure Rule (tok : Type ): Type where
+structure Rule (tok : Type): Type where
   re : RE
   action : String → tok
 
