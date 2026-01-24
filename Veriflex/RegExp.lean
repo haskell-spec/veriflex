@@ -44,8 +44,7 @@ inductive RE : Type where
   | Symbol : Char → RE
     /--
     The regular expression matching every character for which
-    the given property holds. We enforce that the property cannot
-    be false for every argument, so `L(Property(P)) ≠ ∅`.
+    the given property holds.
 
     `L(Property(P)) = { a | a ∈ Σ ∧ P(a) = true }`
     -/
