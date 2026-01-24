@@ -74,7 +74,17 @@ def fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State
     P (max_pref_one_rec s) := by
     intros H_start
     unfold max_pref_one_rec
-    sorry
+    let ⟨re,left,right,best⟩ := s <;> clear s
+    revert re left best
+    induction right with
+    | nil =>
+      intros re left best H_pre
+      unfold max_pref_one_step <;> simp
+      unfold max_pref_one_helper
+      assumption
+    | cons hd tl IH =>
+      intros re left best H_pre
+      sorry
 
 /--
 Given an input string and a rule, compute the longest prefix of the input that matches this rule.
