@@ -84,7 +84,35 @@ def fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State
       assumption
     | cons hd tl IH =>
       intros re left best H_pre
-      sorry
+      generalize H_eq : { re := re, left := left, right := hd :: tl, best := best : State} = x at *
+      have H_exists : ∃ x', max_pref_one_step x = some x' := by
+        rw [←H_eq]
+        unfold max_pref_one_step <;> simp
+        by_cases H_nullable : nullable (derivative hd.content re)
+        . rw [H_nullable] <;> simp
+        . simp! at H_nullable
+          rw [H_nullable] <;> simp
+      let ⟨x', H_x'⟩ := H_exists <;> clear H_exists
+      have H_P_x' : P x' := by
+        apply H_preserved
+        . apply H_pre
+        . assumption
+      unfold max_pref_one_helper
+      rw [H_x'] <;> simp
+      rw [←H_eq] at H_x'
+      unfold max_pref_one_step at H_x' <;> simp at H_x'
+      by_cases H_nullable : nullable (derivative hd.content re)
+      . rw [H_nullable] at H_x' <;> simp at H_x'
+        rw [←H_x']
+        apply IH
+        rw [←H_x'] at H_P_x'
+        assumption
+      . simp! at H_nullable
+        rw [H_nullable] at H_x' <;> simp at H_x'
+        rw [←H_x']
+        apply IH
+        rw [←H_x'] at H_P_x'
+        assumption
 
 /--
 Given an input string and a rule, compute the longest prefix of the input that matches this rule.
