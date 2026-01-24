@@ -8,86 +8,179 @@ import Veriflex.Located
 
 namespace Veriflex
 
-def max_pref_one_rec
-  (re : RE)
-  (best : Option (List LChar × List LChar))
-  (left right : List LChar)
- : Option (List LChar × List LChar) :=
-  match right with
-  | [] => if nullable re
-          then some (left, right)
-          else best
-  | s :: right' => let re' := derivative s.content re
-               let left' := left ++ [s]
-               if nullable re'
-               then max_pref_one_rec re' (some (left', right')) left' right'
-               else max_pref_one_rec re' best left' right'
+structure State : Type where
+  re : RE
+  left : List LChar
+  right : List LChar
+  best : Option (List LChar × List LChar)
+
+def initial_state (s : List LChar) (re: RE) : State :=
+  State.mk re [] s none
+
+def max_pref_one_step
+  (state: State) : Option State :=
+  match state.right with
+  | [] => none
+  | s :: right' =>
+    let re' := derivative s.content state.re
+    let left' := state.left ++ [s]
+    if nullable re'
+    then some (State.mk re' left' right' (some (left', right')))
+    else some (State.mk re' left' right' state.best)
 
 
-/-- Lemma for proving `max_pref_one_prefix` -/
-theorem max_pref_one_rec_prefix :
-  max_pref_one_rec re best left right = some ⟨pre, rest⟩ →
-  best = some ⟨pre, rest⟩ ∨ left ++ right = pre ++ rest := by
-  revert re best left pre rest
-  induction right with
-  | nil =>
-    intros re best left pre rest H
-    simp! at H
-    by_cases H_nullable : nullable re
-    . rw [H_nullable] at H
-      simp! at H
-      apply Or.inr
-      let ⟨H₁,H₂⟩ := H
-      rw [H₁,H₂]
-    . rw [eq_false_of_ne_true H_nullable] at H
-      simp! at H
-      apply Or.inl
+def measure_state (s : Option State) : Nat :=
+  match s with
+  | none => 0
+  | some s => 1 + s.right.length
+
+theorem measure_decrease :
+  ∀ s, measure_state (max_pref_one_step s) < measure_state (some s) := by
+  intros s
+  match H : max_pref_one_step s with
+  | none =>
+    simp!
+    omega
+  | some s' =>
+    simp!
+    unfold max_pref_one_step at H
+    match H' : s.right with
+    | List.nil =>
+      rw [H'] at H <;> simp! at H
+    | List.cons hd tl =>
+      rw [H'] at H <;> simp! at H
+      by_cases H'' : nullable (derivative hd.content s.re)
+      . rw [H''] at H <;> simp! at H
+        rw [←H] <;> simp!
+      . simp! at H'' <;> rw [H''] at H <;> simp! at H
+        rw [←H] <;> simp!
+
+def max_pref_one_helper (s : State)(next : Option State) : State :=
+  match next with
+  | none => s
+  | some s' => max_pref_one_helper s' (max_pref_one_step s')
+  termination_by measure_state next
+  decreasing_by
+    apply measure_decrease
+
+def max_pref_one_rec (s : State) : State :=
+  max_pref_one_helper s (max_pref_one_step s)
+
+def preserved (P : State → Prop) : Prop :=
+  ∀ (s₁ s₂ : State), P s₁ → max_pref_one_step s₁ = some s₂ → P s₂
+
+def fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State):
+    P s →
+    P (max_pref_one_rec s) := by
+    intros H_start
+    unfold max_pref_one_rec
+    let ⟨re,left,right,best⟩ := s <;> clear s
+    revert re left best
+    induction right with
+    | nil =>
+      intros re left best H_pre
+      unfold max_pref_one_step <;> simp
+      unfold max_pref_one_helper
       assumption
-  | cons hd tl IH =>
-    intros re best left pre rest H
-    simp! at H
-    by_cases H_nullable : nullable (derivative hd.content re)
-    . rw [H_nullable] at H
-      simp! at H
-      specialize IH H
-      apply Or.inr
-      cases IH with
-      | inl IH =>
-        cases IH
-        simp!
-      | inr IH => simp! at * ; assumption
-    . rw [eq_false_of_ne_true H_nullable] at H
-      simp! at H
-      specialize IH H
-      cases IH with
-      | inl IH => apply Or.inl ; assumption
-      | inr IH => apply Or.inr ; simp! at * ; assumption
+    | cons hd tl IH =>
+      intros re left best H_pre
+      generalize H_eq : { re := re, left := left, right := hd :: tl, best := best : State} = x at *
+      have H_exists : ∃ x', max_pref_one_step x = some x' := by
+        rw [←H_eq]
+        unfold max_pref_one_step <;> simp
+        by_cases H_nullable : nullable (derivative hd.content re)
+        . rw [H_nullable] <;> simp
+        . simp! at H_nullable
+          rw [H_nullable] <;> simp
+      let ⟨x', H_x'⟩ := H_exists <;> clear H_exists
+      have H_P_x' : P x' := by
+        apply H_preserved
+        . apply H_pre
+        . assumption
+      unfold max_pref_one_helper
+      rw [H_x'] <;> simp
+      rw [←H_eq] at H_x'
+      unfold max_pref_one_step at H_x' <;> simp at H_x'
+      by_cases H_nullable : nullable (derivative hd.content re)
+      . rw [H_nullable] at H_x' <;> simp at H_x'
+        rw [←H_x']
+        apply IH
+        rw [←H_x'] at H_P_x'
+        assumption
+      . simp! at H_nullable
+        rw [H_nullable] at H_x' <;> simp at H_x'
+        rw [←H_x']
+        apply IH
+        rw [←H_x'] at H_P_x'
+        assumption
 
 /--
 Given an input string and a rule, compute the longest prefix of the input that matches this rule.
 If the regular expression matches successfully, return the computed token,
 the length of the consumed input, and the remainder of the output.
 -/
-def max_pref_one (re : RE)(input : List LChar)  : Option (List LChar × List LChar) :=
-  max_pref_one_rec re none [] input
+def max_pref_one (re : RE) (s : List LChar) : Option (List LChar × List LChar) :=
+  (max_pref_one_rec (initial_state s re)).best
+
+/--
+Proving invariants
+-/
+
+def invariant_strings (input: List LChar)(state : State) : Prop :=
+  match state.best with
+  | none =>
+    input = state.left ++ state.right
+  | some (left', right') =>
+    input = state.left ++ state.right ∧
+    input = left' ++ right'
+
+
+theorem preserved_invariant_strings_step : ∀ input, preserved (invariant_strings input) := by
+  intros input s s' H_pre H_step
+  let ⟨re,left,right,best⟩ := s
+  unfold max_pref_one_step at H_step
+  simp! at H_step
+  cases right with
+  | nil => simp! at H_step
+  | cons s right' =>
+    simp! at H_step
+    by_cases H : (nullable (derivative s.content re) = true)
+    . rw [H] at H_step <;> simp! at H_step
+      rw [←H_step] <;> clear H_step H
+      unfold invariant_strings at * <;> simp! at *
+      match best with
+      | none => assumption
+      | some b =>
+        simp! at H_pre
+        let ⟨H_pre, _⟩ := H_pre
+        assumption
+    . simp! at H
+      rw [H] at H_step <;> simp! at H_step
+      rw [←H_step] <;> clear H_step H
+      unfold invariant_strings at * <;> simp! at *
+      assumption
+
+theorem preserves_invariant_strings :
+  ∀ input s, invariant_strings input s →
+       invariant_strings input (max_pref_one_rec s) := by
+  intros input s H_pre
+  apply fundamental_lemma
+  . apply preserved_invariant_strings_step
+  . assumption
+
 
 theorem max_pref_one_prefix :
   max_pref_one rule input = some ⟨pre, rest⟩ →
   pre ++ rest = input := by
-  unfold max_pref_one
   intros H
-  have H' := max_pref_one_rec_prefix H
-  cases H' with
-  | inl H' => cases H'
-  | inr H' => symm ; assumption
-
-theorem max_pref_one_matches :
-  max_pref_one rule input = some ⟨pre, rest⟩ →
-  Matching re (contents pre) := sorry
-
-theorem max_pref_one_longest :
-  max_pref_one rule input = some ⟨pre, rest⟩ →
-  ∀ pre' rest',
-    pre' ++ rest' = input →
-    Matching re (contents pre') →
-    pre'.length <= pre.length := sorry
+  unfold max_pref_one at H
+  have H_pre : invariant_strings input (initial_state input rule) := by
+    unfold initial_state invariant_strings <;> simp!
+  have H_res : invariant_strings input (max_pref_one_rec (initial_state input rule)) := by
+   apply preserves_invariant_strings
+   assumption
+  clear H_pre
+  unfold invariant_strings at H_res
+  rw [H] at H_res <;> simp! at H_res
+  let ⟨_,H_res⟩ := H_res
+  rw [←H_res]
