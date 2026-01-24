@@ -9,15 +9,13 @@ import Veriflex.Located
 namespace Veriflex
 
 structure State : Type where
-  initial_re : RE
-  initial_text : List LChar
   re : RE
   left : List LChar
   right : List LChar
   best : Option (List LChar × List LChar)
 
 def initial_state (s : List LChar) (re: RE) : State :=
-  State.mk re s re [] s none
+  State.mk re [] s none
 
 def max_pref_one_step
   (state: State) : Option State :=
@@ -27,8 +25,8 @@ def max_pref_one_step
     let re' := derivative s.content state.re
     let left' := state.left ++ [s]
     if nullable re'
-    then some (State.mk state.initial_re state.initial_text re' left' right' (some (left', right')))
-    else some (State.mk state.initial_re state.initial_text re' left' right' state.best)
+    then some (State.mk re' left' right' (some (left', right')))
+    else some (State.mk re' left' right' state.best)
 
 
 def measure_state (s : Option State) : Nat :=
@@ -90,18 +88,18 @@ def max_pref_one (re : RE) (s : List LChar) : Option (List LChar × List LChar) 
 Proving invariants
 -/
 
-def invariant_strings (state : State) : Prop :=
+def invariant_strings (input: List LChar)(state : State) : Prop :=
   match state.best with
   | none =>
-    state.initial_text = state.left ++ state.right
+    input = state.left ++ state.right
   | some (left', right') =>
-    state.initial_text = state.left ++ state.right ∧
-    state.initial_text = left' ++ right'
+    input = state.left ++ state.right ∧
+    input = left' ++ right'
 
 
-theorem preserved_invariant_strings_step : preserved invariant_strings := by
-  intros s s' H_pre H_step
-  let ⟨_,initial_text,re,left,right,best⟩ := s
+theorem preserved_invariant_strings_step : ∀ input, preserved (invariant_strings input) := by
+  intros input s s' H_pre H_step
+  let ⟨re,left,right,best⟩ := s
   unfold max_pref_one_step at H_step
   simp! at H_step
   cases right with
@@ -125,9 +123,9 @@ theorem preserved_invariant_strings_step : preserved invariant_strings := by
       assumption
 
 theorem preserves_invariant_strings :
-  ∀ s, invariant_strings s →
-       invariant_strings (max_pref_one_rec s) := by
-  intros s H_pre
+  ∀ input s, invariant_strings input s →
+       invariant_strings input (max_pref_one_rec s) := by
+  intros input s H_pre
   apply fundamental_lemma
   . apply preserved_invariant_strings_step
   . assumption
@@ -138,9 +136,9 @@ theorem max_pref_one_prefix :
   pre ++ rest = input := by
   intros H
   unfold max_pref_one at H
-  have H_pre : invariant_strings (initial_state input rule) := by
+  have H_pre : invariant_strings input (initial_state input rule) := by
     unfold initial_state invariant_strings <;> simp!
-  have H_res : invariant_strings (max_pref_one_rec (initial_state input rule)) := by
+  have H_res : invariant_strings input (max_pref_one_rec (initial_state input rule)) := by
    apply preserves_invariant_strings
    assumption
   clear H_pre
@@ -148,4 +146,3 @@ theorem max_pref_one_prefix :
   rw [H] at H_res <;> simp! at H_res
   let ⟨_,H_res⟩ := H_res
   rw [←H_res]
-  sorry
