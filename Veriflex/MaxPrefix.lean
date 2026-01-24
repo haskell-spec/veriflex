@@ -68,6 +68,16 @@ def max_pref_one_helper (s : State)(next : Option State) : State :=
 def max_pref_one_rec (s : State) : State :=
   max_pref_one_helper s (max_pref_one_step s)
 
+def preserved (P : State → Prop) : Prop :=
+  ∀ (s₁ s₂ : State), P s₁ → max_pref_one_step s₁ = some s₂ → P s₂
+
+def fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State):
+    P s →
+    P (max_pref_one_rec s) := by
+    intros H_start
+    unfold max_pref_one_rec
+    sorry
+
 /--
 Given an input string and a rule, compute the longest prefix of the input that matches this rule.
 If the regular expression matches successfully, return the computed token,
