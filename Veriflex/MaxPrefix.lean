@@ -99,10 +99,7 @@ def invariant_strings (state : State) : Prop :=
     state.initial_text = left' ++ right'
 
 
-theorem preserves_invariant_strings_step :
-  ∀ s s', invariant_strings s →
-          max_pref_one_step s = some s' →
-          invariant_strings s' := by
+theorem preserved_invariant_strings_step : preserved invariant_strings := by
   intros s s' H_pre H_step
   let ⟨_,initial_text,re,left,right,best⟩ := s
   unfold max_pref_one_step at H_step
@@ -127,6 +124,28 @@ theorem preserves_invariant_strings_step :
       unfold invariant_strings at * <;> simp! at *
       assumption
 
+theorem preserves_invariant_strings :
+  ∀ s, invariant_strings s →
+       invariant_strings (max_pref_one_rec s) := by
+  intros s H_pre
+  apply fundamental_lemma
+  . apply preserved_invariant_strings_step
+  . assumption
+
+
 theorem max_pref_one_prefix :
   max_pref_one rule input = some ⟨pre, rest⟩ →
-  pre ++ rest = input := sorry
+  pre ++ rest = input := by
+  intros H
+  unfold max_pref_one at H
+  have H_pre : invariant_strings (initial_state input rule) := by
+    unfold initial_state invariant_strings <;> simp!
+  have H_res : invariant_strings (max_pref_one_rec (initial_state input rule)) := by
+   apply preserves_invariant_strings
+   assumption
+  clear H_pre
+  unfold invariant_strings at H_res
+  rw [H] at H_res <;> simp! at H_res
+  let ⟨_,H_res⟩ := H_res
+  rw [←H_res]
+  sorry
