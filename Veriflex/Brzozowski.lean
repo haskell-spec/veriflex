@@ -260,7 +260,7 @@ theorem derivative_correct_mp (x : Char) (re : RE) (xs : List Char) :
       simp! at H
       cases H with
       | EPSILON => apply Matching.SYMBOL
-    . rw [if_neg H_eq] at H ; cases H
+    . rw [ite_eq_right H_eq] at H ; cases H
   | Property P =>
     simp! at H
     by_cases H_eq : P x = true
@@ -270,7 +270,7 @@ theorem derivative_correct_mp (x : Char) (re : RE) (xs : List Char) :
       | EPSILON =>
         apply Matching.PROPERTY
         assumption
-    . rw [if_neg H_eq] at H ; cases H
+    . rw [ite_eq_right H_eq] at H ; cases H
   | Union re₁ re₂ IH₁ IH₂ =>
     cases H with
     | UNION_L H_match =>
@@ -297,7 +297,7 @@ theorem derivative_correct_mp (x : Char) (re : RE) (xs : List Char) :
         apply Matching.APP
         . apply (nullable_correct re₁).mp ; assumption
         . assumption
-      . rw [if_neg H_eq] at H ; cases H
+      . rw [ite_eq_right H_eq] at H ; cases H
   | Star re IH =>
     cases H with
     | APP w₁ w₂ H_w₁ H_w₂ =>
