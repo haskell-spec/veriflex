@@ -16,7 +16,7 @@ def apply_rule  {tok : Type} :
   Option (tok × List LChar × List LChar) := λ ⟨rule,x ⟩ =>
   match x with
   | none => none
-  | some ⟨pre, rest⟩ => some ⟨rule.action (String.mk (contents pre)), pre, rest⟩
+  | some ⟨pre, rest⟩ => some ⟨rule.action (String.ofList (contents pre)), pre, rest⟩
 
 def max_pref {tok : Type}
              (input : List LChar)

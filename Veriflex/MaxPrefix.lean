@@ -69,7 +69,7 @@ def max_pref_one_rec (s : State) : State :=
 def preserved (P : State → Prop) : Prop :=
   ∀ (s₁ s₂ : State), P s₁ → max_pref_one_step s₁ = some s₂ → P s₂
 
-def fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State):
+theorem fundamental_lemma (P : State → Prop) (H_preserved : preserved P)(s : State):
     P s →
     P (max_pref_one_rec s) := by
     intros H_start

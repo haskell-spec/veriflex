@@ -35,10 +35,10 @@ theorem find_first_max_empty :
         intros hd H
         simp! at H
         by_cases H_le : f hd < f hd'
-        . rw [if_pos H_le] at H
+        . rw [ite_eq_left H_le] at H
           specialize IH _ H
           exact IH
-        . rw [if_neg H_le] at H
+        . rw [ite_eq_right H_le] at H
           specialize IH _ H
           exact IH
   . rw [H]
@@ -60,14 +60,14 @@ theorem find_first_max_rec_contained :
     intros best H
     simp! at H
     by_cases H_le : f best < f hd
-    . rw [if_pos H_le] at H
+    . rw [ite_eq_left H_le] at H
       specialize IH H
       apply Or.inl
       simp
       cases IH with
       | inl H' => apply Or.inr ; assumption
       | inr H' => apply Or.inl ; assumption
-    . rw [if_neg H_le] at H
+    . rw [ite_eq_right H_le] at H
       specialize IH H
       cases IH with
       | inl H' =>
